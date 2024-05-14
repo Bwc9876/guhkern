@@ -12,6 +12,7 @@
 #![no_main]
 // Enable the `start` attribute, which allows us to define our own entrypoint (see start::start)
 #![feature(start)]
+#![feature(asm_const)]
 #![allow(dead_code)]
 
 use core::{
@@ -25,6 +26,7 @@ use cpu::Cpu;
 // Module for interacting with the console
 mod console;
 
+// Constants used throughout the kernel
 mod consts;
 
 // Module for managing the current core
@@ -53,28 +55,68 @@ mod uart;
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 #[no_mangle]
-// When this function is called, we're in supervisor mode and our kernel is bootstrapped
-// See start.rs for the actual bootstrapping code
+// Even though this is called main, this isn't actually the start of our program!
+// When we get here the kernel has already been loaded into memory and the CPU has been initialized
+// Look below this function to start the long journey of the kernel bootstrapping
 pub fn main() -> ! {
+    // Ok! So we're in the main function and we're officially started!
+    // First thing we need to do is get the ID of the CPU we're running on,
+    // this is so we can only have one CPU do initialization of shared resources such
+    // as the console and the println! macros
     let cpu_id = Cpu::get_id();
     if cpu_id == 0 {
+        // If we're the first CPU, we need to initialize our shared resources
         console::init_console();
         println::init_println();
-        println!("Guhkern booting!");
+        // First output to the console! If we get here we're doing good because we can now debug
+        // *much* easier
+        println!("Kernel booting!");
 
+        // Signal to the other CPUs that we're done initializing
+        // This will allow the other CPUs to start
         INITIALIZED.store(true, Ordering::SeqCst);
     } else {
+        // If we're not CPU 0, we're going to be waiting on the sidelines until
+        // CPU 0 finishes initializing, telling us we can start
         while !INITIALIZED.load(Ordering::SeqCst) {
             // Wait for CPU 0 to finish initializing
+            // This hint is a special way for the compiler to know we're busy-waiting (spin-locking)
+            // It emits a special instruction that signals to the CPU that we're waiting for something
+            // and the CPU can then so some optimizations to make this more efficient
             core::hint::spin_loop();
         }
+        // CPU 0 is done and we have access to shared resources using locks
         println!("CPU {} starting", cpu_id);
     }
+    // TEMP: Just spin forever for now, we'd want to head into our scheduler from here
     loop {
         core::hint::spin_loop();
     }
 }
 
-static STACK0: [u8; 4096 * NUM_CPUS] = [0; 4096 * NUM_CPUS];
+// === START HERE ===
 
-global_asm!(include_str!("entry.S"), sym STACK0);
+// So first things first as we're booting up the kernel, we need to define the entrypoint
+// that everything will start from. This is the start of the bootstrapping process.
+// To do this we need to write some assembly, I put this in a separate file called entry.S
+// that you should go look at the second you see include_str!("entry.S") below
+
+// First we need to initialize the stack for each CPU
+// This is going to be a 4KB stack for each CPU
+// The reason we do this is we don't want CPUs to share a stack
+// because then they'll get in each other's way
+// So we create a new slice of 4KB for each CPU
+
+const STACK_PER_CPU: usize = 4096;
+
+static STACK0: [u8; STACK_PER_CPU * NUM_CPUS] = [0; STACK_PER_CPU * NUM_CPUS];
+
+// Here we're telling Rust to include the assembly code from entry.S
+// I could have wrote it all in here, but it's easier to follow with syntax highlighting
+// The sym STACK0 is a symbol (hence the `sym` keyword) that we're telling Rust to insert into the assembly code
+// This symbol is the address of the stack we just defined
+// This will get inserted where the {} is in the assembly code
+// Also, we insert the constant STACK_PER_CPU into the assembly code so
+// we have a single place where we can change the stack size
+
+global_asm!(include_str!("entry.S"), sym STACK0, const STACK_PER_CPU);

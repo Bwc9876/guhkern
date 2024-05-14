@@ -1,0 +1,7 @@
+{
+    "recommendations": [
+        "zixuanwang.linkerscript",
+        "zhwu95.riscv",
+        "rust-lang.rust-analyzer"
+    ]
+}

@@ -1,8 +1,10 @@
 use riscv::register::{self, mstatus::MPP, satp::Mode};
 
 #[no_mangle]
-// Start entrypoint
-// Ignore args, we're literally a kernel after all
+// Start entrypoint, this is the first bit of Rust ever run in our kernel
+// we're coming from entry.S here, which is the true entrypoint of the kernel.
+// In this function we configure the CPU to run how we want it to, and then jump to our `main` function
+// where the real kernel logic starts (I promise this time we're actually starting the kernel after this)
 pub fn start() {
     // Set our previous privilege mode to supervisor
     // Also set our exception program counter to `main`, which is where we want to jump to when we `mret`

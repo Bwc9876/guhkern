@@ -61,22 +61,31 @@ impl Spinlock {
         }
     }
 
+    // Initialize a Spinlock, this will set the lock to Some(Spinlock)
+    // We want to make sure only one thread initialized a spinlock
+    // which is why we don't just set it directly in the static and instead
+    // make an option
     pub fn init(lock: &mut Option<Spinlock>) {
         *lock = Some(Spinlock::new());
     }
 
     // Acquire a lock on the Spinlock, this will take care of disabling interrupts
-    // and give back a special SpinLockGuard that will enable interrupts when it's dropped
+    // and give back a special SpinLockGuard that will enable interrupts and unlock when it's dropped
+    // This function will panic if the lock is already acquired by the current CPU, or if the lock is not initialized
     pub fn acquire(lock: Option<&mut Spinlock>) -> SpinlockGuard {
+        // Disable interrupts as we really really don't want to be interrupted while taking a lock
         disable_interrupts();
+        // Get out current CPU to make sure the lock isn't being held by our CPU already
         let cpu = Cpu::get_id();
         let lock = lock.expect("Lock not initialized");
         if lock.cpu == Some(cpu) {
             panic!("Lock already acquired by this CPU ({})", cpu);
         }
+        // Keep spinning until we can get the lock, this is a very simple way to handle mutual exclusion
         while lock.locked.swap(true, Ordering::Acquire) {
             // Spin until we can get the lock
         }
+        // We now have the lock! Set the CPU to the current CPU and return a SpinlockGuard
         lock.cpu = Some(cpu);
         SpinlockGuard(lock)
     }
@@ -97,10 +106,14 @@ impl Deref for SpinlockGuard<'_> {
 // Implement Drop for SpinlockGuard so we can unlock and enable interrupts when it's dropped
 impl Drop for SpinlockGuard<'_> {
     fn drop(&mut self) {
+        // Get the CPU ID and ensure we're the ones that acquired the lock
+        // If we're not, panic as something went wrong
         let cpu = Cpu::get_id();
         if self.0.cpu != Some(cpu) {
             panic!("Lock not acquired by this CPU ({})", cpu);
         }
+        // We know we have the lock, so we can release it, set the CPU to None
+        // and then re-enable interrupts so other CPUs can take the lock
         self.0.cpu = None;
         self.0.locked.store(false, Ordering::Release);
         enable_interrupts();
@@ -108,6 +121,7 @@ impl Drop for SpinlockGuard<'_> {
 }
 
 // Macro to define a new spinlock and give it a static lifetime
+// This starts it out as None, and it should be initialized later
 #[macro_export]
 macro_rules! spinlock {
     ($name:ident) => {
