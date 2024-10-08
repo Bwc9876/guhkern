@@ -7,10 +7,7 @@
 
 use core::sync::atomic::Ordering;
 
-use crate::{
-    panic::PANICKED,
-    spinlock::{disable_interrupts, enable_interrupts},
-};
+use crate::{panic::PANICKED, spinlock::{disable_interrupts, enable_interrupts}};
 
 spinlock!(UART_LOCK);
 

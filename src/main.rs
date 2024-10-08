@@ -10,8 +10,6 @@
 // We won't have access to the C runtime or Rust runtime in bare-metal, so we need to define our own entrypoint
 // that uses neither
 #![no_main]
-// Enable the `start` attribute, which allows us to define our own entrypoint (see start::start)
-#![feature(start)]
 #![feature(asm_const)]
 #![allow(dead_code)]
 
@@ -31,6 +29,9 @@ mod consts;
 
 // Module for managing the current core
 mod cpu;
+
+// Module for handling memory allocation in user space
+mod kalloc;
 
 // Defining our panic handler in this module
 mod panic;
@@ -71,7 +72,10 @@ pub fn main() -> ! {
         // First output to the console! If we get here we're doing good because we can now debug
         // *much* easier
         println!("Kernel booting!");
+        kalloc::kinit();
 
+
+        println!("CPU 0 Finished Setup!");
         // Signal to the other CPUs that we're done initializing
         // This will allow the other CPUs to start
         INITIALIZED.store(true, Ordering::SeqCst);

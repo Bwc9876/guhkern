@@ -22,11 +22,11 @@ fn panic(info: &PanicInfo) -> ! {
         PRINTLN_LOCK.0 = false;
         // Now we print the panic message to the screen, this won't
         // lock as we've set the lock to false
-        println!("!=!=!=! Kernel panicked! !=!=!=!");
-        println!("Reason: {}", info);
+        println!("Kernel panic");
+        println!("Panic: {}", info);
         // Finally we set the PANICKED flag to true, this will
         // prevent other cores from continuing to output messages
-        PANICKED.store(true, core::sync::atomic::Ordering::SeqCst);
+        PANICKED.store(true, core::sync::atomic::Ordering::Relaxed);
     }
     loop {}
 }

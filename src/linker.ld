@@ -65,9 +65,7 @@ SECTIONS
     . = ALIGN(4K);
     bss_end = .;
 
+    /* This is the end of the kernel, we use this marker so our page allocator knows where the end of the kernel is */
+    /* and can allocate memory beyond it */
     kernel_end = .;
-
-    /DISCARD/ : {
-        *(.eh_frame)
-    }
 }

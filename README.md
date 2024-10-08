@@ -51,16 +51,17 @@ just qemu
 
 This will run the kernel in qemu and you should see the output of the kernel in the terminal.
 
+Note: this does start the kernel in debug mode, if you're looking for the classic rust speeds run:
+
+```sh
+just qemu-release
+```
+
+Which will run the kernel in release mode.
+
 ### Killing
 
-As of the moment, the only way to kill the qemu process is to run `pkill -15 .qemu-system-r`. This
-will send the `SIGTERM` signal to the qemu process and it will exit.
-
-### Logs
-
-After running you can view the `exec` logs in `log.txt` this will be quite a big file and it will have every
-core's logs. I'd recommend doing `| grep "Trace N:"` replacing N with the core number if you want more filtered output.
-You can also filter by the name of the function as well using grep.
+To exit qemu, you can press `Ctrl + A` followed by `X`.
 
 ### Assembly
 

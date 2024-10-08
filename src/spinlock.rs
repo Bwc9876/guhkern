@@ -31,7 +31,7 @@ pub fn enable_interrupts() {
         // Check if interrupts are on, if they are, panic as we're enabling interrupts while holding a lock
         let is_on = register::sstatus::read().sie();
         if is_on {
-            panic!("Interrupts already on");
+            panic!("interrupts_on_enable");
         }
         // Get the current CPU, we know interrupts are off so we can call this.
         let cpu = Cpu::mine();
@@ -77,9 +77,9 @@ impl Spinlock {
         disable_interrupts();
         // Get out current CPU to make sure the lock isn't being held by our CPU already
         let cpu = Cpu::get_id();
-        let lock = lock.expect("Lock not initialized");
+        let lock = lock.expect("lock_uninit");
         if lock.cpu == Some(cpu) {
-            panic!("Lock already acquired by this CPU ({})", cpu);
+            panic!("lock_acq_same_hart");
         }
         // Keep spinning until we can get the lock, this is a very simple way to handle mutual exclusion
         while lock.locked.swap(true, Ordering::Acquire) {
@@ -110,7 +110,7 @@ impl Drop for SpinlockGuard<'_> {
         // If we're not, panic as something went wrong
         let cpu = Cpu::get_id();
         if self.0.cpu != Some(cpu) {
-            panic!("Lock not acquired by this CPU ({})", cpu);
+            panic!("lock_rel_diff_hart");
         }
         // We know we have the lock, so we can release it, set the CPU to None
         // and then re-enable interrupts so other CPUs can take the lock
