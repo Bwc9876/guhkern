@@ -9,16 +9,12 @@ pub struct PrintlnLock(pub bool, pub Option<Spinlock>);
 
 // Have a lock here to prevent multiple cores from printing at the same time
 // Here's an example of what could happen if we don't have a lock:
-// Highlight from when locks weren't working:
 // - CCPPUU  12  ssttaarrttiinngg
 // - CCPU PU 21  stsatratrting i
 //   ng
-// Highlight from when locks were working:
-// - CPU 1 starting
-//   CPU 2 starting
 pub static mut PRINTLN_LOCK: PrintlnLock = PrintlnLock(false, None);
 
-// Initialized out locks and sets the PRINTLN_LOCK.0 to true
+// Initialized our locks and sets the PRINTLN_LOCK.0 to true
 // this means we'll require the lock to print
 pub fn init_println() {
     unsafe {

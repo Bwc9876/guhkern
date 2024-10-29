@@ -7,13 +7,16 @@
 
 use core::sync::atomic::Ordering;
 
-use crate::{panic::PANICKED, spinlock::{disable_interrupts, enable_interrupts}};
+use crate::{
+    panic::PANICKED,
+    spinlock::{disable_interrupts, enable_interrupts},
+};
 
 spinlock!(UART_LOCK);
 
 // The UART like the CLINT is memory-mapped, so we need to know where it is in memory
 // QEMU sets the UART to be at 0x10000000
-const UART_LOC0: usize = 0x10000000;
+pub const UART_LOC0: usize = 0x10000000;
 const UART_LOC0_IRQ: usize = 10;
 
 // Various "registers" of the UART, note that these are not real registers but rather memory addresses

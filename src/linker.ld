@@ -31,7 +31,7 @@ SECTIONS
         /* The rest of the kernel code */
         *(.text .text.*)
     }
-    . = ALIGN(4K);
+    . = ALIGN(4k);
     text_end = .;
 
     /* The .rodata section is where read-only data goes, like strings and such, we want this next */

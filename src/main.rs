@@ -13,13 +13,19 @@
 #![feature(asm_const)]
 #![allow(dead_code)]
 
+// Needed to use Vec and String, since we have a GlobalAllocator setup in [kalloc.rs] we can use it
+#[macro_use]
+extern crate alloc;
+
 use core::{
     arch::global_asm,
     sync::atomic::{AtomicBool, Ordering},
 };
 
+use alloc::string::{String, ToString};
 use consts::NUM_CPUS;
 use cpu::Cpu;
+use vm::kvm_init_hart;
 
 // Module for interacting with the console
 mod console;
@@ -40,6 +46,8 @@ mod panic;
 #[macro_use]
 mod println;
 
+mod plic;
+
 // Module for handling mutually exclusive spin locks
 #[macro_use]
 mod spinlock;
@@ -53,12 +61,18 @@ mod timer;
 // Module for handling UART communication
 mod uart;
 
+// Module for interacting with a virtual disk
+mod virtio;
+
+// Module for handling Virtual Memory and Page Tables
+mod vm;
+
 static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 #[no_mangle]
 // Even though this is called main, this isn't actually the start of our program!
 // When we get here the kernel has already been loaded into memory and the CPU has been initialized
-// Look below this function to start the long journey of the kernel bootstrapping
+// Look below this function to start the long journey of the kernel bootstrapping process
 pub fn main() -> ! {
     // Ok! So we're in the main function and we're officially started!
     // First thing we need to do is get the ID of the CPU we're running on,
@@ -73,7 +87,9 @@ pub fn main() -> ! {
         // *much* easier
         println!("Kernel booting!");
         kalloc::kinit();
-
+        vm::kvm_init_base();
+        vm::kvm_init_hart();
+        println!("KVM Init");
 
         println!("CPU 0 Finished Setup!");
         // Signal to the other CPUs that we're done initializing
@@ -91,6 +107,7 @@ pub fn main() -> ! {
         }
         // CPU 0 is done and we have access to shared resources using locks
         println!("CPU {} starting", cpu_id);
+        kvm_init_hart();
     }
     // TEMP: Just spin forever for now, we'd want to head into our scheduler from here
     loop {

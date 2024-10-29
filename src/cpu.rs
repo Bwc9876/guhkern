@@ -1,7 +1,7 @@
 use crate::consts::NUM_CPUS;
 
 // Represents a CPU core in our system
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy)]
 pub struct Cpu {
     // pub process: Process,
     // pub context: Context,

@@ -106,7 +106,7 @@ impl Deref for SpinlockGuard<'_> {
 // Implement Drop for SpinlockGuard so we can unlock and enable interrupts when it's dropped
 impl Drop for SpinlockGuard<'_> {
     fn drop(&mut self) {
-        // Get the CPU ID and ensure we're the ones that acquired the lock
+        // Get the CPU ID and ensure we're the one that acquired the lock
         // If we're not, panic as something went wrong
         let cpu = Cpu::get_id();
         if self.0.cpu != Some(cpu) {
