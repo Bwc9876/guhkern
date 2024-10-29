@@ -6,15 +6,10 @@
 
 use core::{
     alloc::GlobalAlloc,
-    arch::asm,
     ptr::{addr_of_mut, null_mut},
 };
 
-use crate::{
-    consts::{KERNEL_START, PHYS_STOP},
-    println,
-    spinlock::Spinlock,
-};
+use crate::{consts::PHYS_STOP, println, spinlock::Spinlock};
 
 // This is the size of each page in memory
 pub const PAGE_SIZE: usize = 4096;
@@ -22,13 +17,13 @@ pub const PAGE_SIZE: usize = 4096;
 // This is the maximum virtual address that we can allocate memory to
 pub const MAX_VIRTUAL_ADDRESS: usize = 1 << (9 + 9 + 9 + 12 - 1); // 2^(9+9+9+12-1) = 2^39
 
+extern "C" {
+    static kernel_end: u8;
+}
+
 #[inline]
-pub fn g_kernel_end() -> usize {
-    let a: usize;
-    unsafe {
-        asm!("la {}, kernel_end", out(reg) a);
-    }
-    a
+fn g_kernel_end() -> usize {
+    unsafe { &kernel_end as *const u8 as usize }
 }
 
 #[repr(transparent)]
@@ -56,8 +51,8 @@ pub fn kinit() {
     // Free all memory from the end of the kernel to the end of physical memory
     // This takes care of setting up all pages of memory to be free
     // Then we have them available in KernelMemory::free which is a linked list of free pages
-    let kernel_end = g_kernel_end();
-    free_range(kernel_end, PHYS_STOP);
+    let end = g_kernel_end();
+    free_range(end, PHYS_STOP);
 }
 
 #[inline]

@@ -14,7 +14,6 @@
 #![allow(dead_code)]
 
 // Needed to use Vec and String, since we have a GlobalAllocator setup in [kalloc.rs] we can use it
-#[macro_use]
 extern crate alloc;
 
 use core::{
@@ -22,7 +21,6 @@ use core::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
-use alloc::string::{String, ToString};
 use consts::NUM_CPUS;
 use cpu::Cpu;
 use vm::kvm_init_hart;

@@ -1,9 +1,6 @@
-use core::arch::asm;
-
 use crate::{
     consts::{KERNEL_START, PHYS_STOP},
-    cpu::Cpu,
-    kalloc::{self, allocate_page, g_kernel_end, set_memory, MAX_VIRTUAL_ADDRESS, PAGE_SIZE},
+    kalloc::{allocate_page, set_memory, MAX_VIRTUAL_ADDRESS, PAGE_SIZE},
     plic::PLIC,
     uart::UART_LOC0,
     virtio::VIRTIO0,
@@ -223,6 +220,10 @@ impl PageTable {
 
 const TRAMPOLINE: usize = MAX_VIRTUAL_ADDRESS - PAGE_SIZE;
 
+extern "system" {
+    static text_end: u8;
+}
+
 fn kvm_make() -> Option<PageTable> {
     let mut kernel_table = PageTable::new().expect("kvm_init: page alloc failed");
 
@@ -234,20 +235,16 @@ fn kvm_make() -> Option<PageTable> {
 
     kernel_table.kvm_map(PLIC, 0x4000000, PLIC, RW);
 
-    let text_end = unsafe {
-        let a: usize;
-        asm!("la {}, text_end", out(reg) a);
-        a
-    };
+    let etext = unsafe { &text_end as *const u8 as usize };
 
     kernel_table.kvm_map(
         KERNEL_START,
-        text_end - KERNEL_START,
+        etext - KERNEL_START,
         KERNEL_START,
         PageTableEntry::FLAG_EXEC | PageTableEntry::FLAG_READ,
     );
 
-    kernel_table.kvm_map(text_end, PHYS_STOP - text_end, text_end, RW);
+    kernel_table.kvm_map(etext, PHYS_STOP - etext, etext, RW);
 
     //kernel_table.kvm_map(TRAMPOLINE, PAGE_SIZE, TRAMPOLINE, PageTableEntry::FLAG_EXEC | PageTableEntry::FLAG_READ);
 
